@@ -1,4 +1,5 @@
 import keyCodes from "../assets/keys.json";
+import ruKeys from "../assets/ru.js";
 
 const keyButton = ({key, keyCode, code, type}) => {
   const div = document.createElement("div");
@@ -6,7 +7,7 @@ const keyButton = ({key, keyCode, code, type}) => {
   div.innerText = key;
   div.code = code;
   type && (div.type = type);
-  div.dataset.id = keyCode;
+  div.id = keyCode;
   div.dataset.code = code;
   return div;
 };
@@ -18,12 +19,17 @@ const createContainer = (tag, style) => {
   return div;  
 };
 
+const languages = {
+  "ru": ruKeys, 
+  "en": keyCodes,
+};
+
 class Keyboard {
   element;
   textarea;
   kboard;
   constructor() {
-    this.lang = localStorage.getItem("lang") || "eng";
+    this.lang = localStorage.getItem("lang") || "en";
     this.btns = [];
     this.create();
   }
@@ -34,6 +40,7 @@ class Keyboard {
     this.kboard = createContainer("div", "keyboard");
     this.textarea = createContainer("textarea", "textarea");
     
+    this.kboard.lang = this.lang;
     
     keyCodes.map(keyCode => {
       const btn = keyButton(keyCode);
@@ -52,6 +59,10 @@ class Keyboard {
       // }      
       
     });
+
+    // if(this.lang !== this.kboard.lang)
+    //   this.changeLanguage(this.lang);
+
     div.insertAdjacentElement("afterbegin", this.textarea);
     div.insertAdjacentElement("beforeEnd", this.kboard);
     div.insertAdjacentHTML("beforeEnd", "<p class='message'>Клавиатура создана в операционной системе Windows.<br> Для переключения языка комбинация: левыe <span>ctrl</span> + <span>alt</span></p>");
@@ -64,6 +75,18 @@ class Keyboard {
   }
 
   changeLanguage = () => {
+    this.lang = this.lang === "ru" ? "en" : "ru";
+    const keyCodes = languages[this.lang];
+    console.log("keyCodes: ", keyCodes);
+    if(!keyCodes)
+      return;
+
+    const letters = this.btns.filter(btn => btn.type === "letter");
+    console.log("letters: ", letters);
+    letters && letters.map(item => {
+      console.log(item, keyCodes[item.id], item.id);
+      item.innerText = keyCodes[item.id];
+    });
     
   };
 
@@ -72,7 +95,7 @@ class Keyboard {
     letters && letters.map(item => item.classList.toggle("keyboard__btn--uppercase"));
   };
 
-  onClickBtn = (event) => {
+  onClickBtn = (event) => { console.log("click", event);
     const el = event.target;
     const currentBtn = this.btns.find(btn => btn === el);
 
@@ -100,14 +123,31 @@ class Keyboard {
       return;
     }
 
+    if(currentBtn && currentBtn.code === "Tab") {
+      event.preventDefault();
+      const caret = this.textarea.selectionStart;
+      const val = this.textarea.value;
+      this.textarea.value = val.slice(0, caret) + "\t" + val.slice(caret);
+      this.textarea.selectionStart = caret + 1;
+      this.textarea.selectionEnd = caret + 1;
+      return;
+    }
+
     console.log(event);
     console.log("currentBtn: ", currentBtn);
-    if(currentBtn)
-      this.textarea.value += el.innerText;
+    if(currentBtn) {
+      const caret = this.textarea.selectionStart;
+      const val = this.textarea.value;
+      this.textarea.value =  val.slice(0, caret) + el.innerText + val.slice(caret);
+      this.textarea.selectionStart = caret + 1;
+      this.textarea.selectionEnd = caret + 1;
+      return;
+    }
   };
 
   onKeyDown = (event) => {
     const {code} = event;
+    console.log(event.altKey, event.ctrlKey);
 
     if(event.altKey && event.ctrlKey) {
       this.changeLanguage();
@@ -115,6 +155,9 @@ class Keyboard {
 
     if(event.code === "CapsLock") {
       this.setUppercase();
+    }
+    if(event.code === "Tab") {
+      event.preventDefault();
     }
 
     //console.log("keyDown: ", code, event.altKey, event.ctrlKey);
