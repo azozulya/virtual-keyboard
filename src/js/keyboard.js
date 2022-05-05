@@ -1,12 +1,17 @@
-import keyCodes from "../assets/keys.json";
-import ruKeys from "../assets/ru.js";
+import enKeys from '../assets/en.json';
+import ruKeys from '../assets/ru.json';
 
-const keyButton = ({key, keyCode, code, type}) => {
-  const div = document.createElement("div");
-  div.classList.add("keyboard__btn", code && code.toLowerCase());
+const keyButton = ({
+  key, keyCode, code, type,
+}) => {
+  const div = document.createElement('button');
+  div.classList.add('keyboard__btn', code && code.toLowerCase());
   div.innerText = key;
   div.code = code;
-  type && (div.type = type);
+  div.type = 'button';
+  if (type) {
+    div.variation = type;
+  }
   div.id = keyCode;
   div.dataset.code = code;
   return div;
@@ -16,163 +21,230 @@ const createContainer = (tag, style) => {
   const div = document.createElement(tag);
   div.classList.add(style);
 
-  return div;  
+  return div;
 };
 
 const languages = {
-  "ru": ruKeys, 
-  "en": keyCodes,
+  ru: ruKeys,
+  en: enKeys,
 };
 
 class Keyboard {
   element;
+
   textarea;
+
   kboard;
+
   constructor() {
-    this.lang = localStorage.getItem("lang") || "en";
+    this.lang = localStorage.getItem('lang') || 'en';
     this.btns = [];
     this.create();
   }
 
- 
   create() {
-    const div = createContainer("div", "container");
-    this.kboard = createContainer("div", "keyboard");
-    this.textarea = createContainer("textarea", "textarea");
-    
-    this.kboard.lang = this.lang;
-    
-    keyCodes.map(keyCode => {
-      const btn = keyButton(keyCode);
+    const currentLanguageKeys = languages[this.lang];
+    const div = createContainer('div', 'container');
+    const textareaWrapper = createContainer('div', 'textarea__wrapper');
 
-      this.btns.push(btn);
-      this.kboard.append(btn);
-      
-      // {
-      //   "key": "Shift",
-      //   "keyCode": 16,
-      //   "which": 16,
-      //   "code": "ShiftLeft",
-      //   "location": 1,
-      //   "description": "shift",
-      //   "unicode": "⇧"
-      // }      
-      
-    });
+    this.kboard = createContainer('div', 'keyboard');
+    this.textarea = createContainer('textarea', 'textarea');
+    this.textarea.cols = 100;
+    this.textarea.rows = 30;
 
-    // if(this.lang !== this.kboard.lang)
-    //   this.changeLanguage(this.lang);
+    if (currentLanguageKeys) {
+      currentLanguageKeys.map((keyCode) => {
+        const btn = keyButton(keyCode);
 
-    div.insertAdjacentElement("afterbegin", this.textarea);
-    div.insertAdjacentElement("beforeEnd", this.kboard);
-    div.insertAdjacentHTML("beforeEnd", "<p class='message'>Клавиатура создана в операционной системе Windows.<br> Для переключения языка комбинация: левыe <span>ctrl</span> + <span>alt</span></p>");
+        this.btns.push(btn);
+        return this.kboard.append(btn);
+      });
+    }
+    const langInfo = createContainer('div', 'keyboard__key');
+    langInfo.innerText = this.lang;
+    this.kboard.insertAdjacentElement('afterbegin', langInfo);
+
+    textareaWrapper.append(this.textarea);
+    div.insertAdjacentElement('afterbegin', textareaWrapper);
+    div.insertAdjacentElement('beforeEnd', this.kboard);
+    div.insertAdjacentHTML(
+      'beforeEnd',
+      '<p class="message">Клавиатура создана в операционной системе Windows.<br> Для переключения языка комбинация: левыe <span>ctrl</span> + <span>alt</span></p>',
+    );
 
     this.textarea.focus();
-    this.kboard.addEventListener("click", this.onClickBtn);
-    document.addEventListener("keydown", this.onKeyDown);
-    document.addEventListener("keyup", this.onKeyUp);
-    document.body.insertAdjacentElement("afterbegin", div);
+    this.kboard.addEventListener('click', this.onClickBtn);
+    this.kboard.addEventListener('mouseup', this.onMouseUp);
+    document.addEventListener('keydown', this.onKeyDown);
+    document.addEventListener('keyup', this.onKeyUp);
+    document.body.insertAdjacentElement('afterbegin', div);
   }
 
   changeLanguage = () => {
-    this.lang = this.lang === "ru" ? "en" : "ru";
-    const keyCodes = languages[this.lang];
-    console.log("keyCodes: ", keyCodes);
-    if(!keyCodes)
-      return;
+    this.lang = this.lang === 'ru' ? 'en' : 'ru';
+    localStorage.setItem('lang', this.lang);
 
-    const letters = this.btns.filter(btn => btn.type === "letter");
-    console.log("letters: ", letters);
-    letters && letters.map(item => {
-      console.log(item, keyCodes[item.id], item.id);
-      item.innerText = keyCodes[item.id];
-    });
-    
+    const keyCodes = languages[this.lang];
+    // eslint-disable-next-line no-console
+    // console.log('keyCodes: ', keyCodes);
+    if (!keyCodes) return;
+
+    const letters = this.btns.filter((btn) => btn.variation === 'letter');
+    // eslint-disable-next-line no-console
+    // console.log('letters: ', letters);
+    if (letters) {
+      letters.map((item) => {
+        const letterBtn = item;
+        const currentKey = keyCodes.find((key) => key.keyCode === parseInt(item.id, 10));
+        // eslint-disable-next-line no-console
+        // console.log(currentKey, item.id);
+        letterBtn.innerText = currentKey.key;
+        return letterBtn;
+      });
+    }
   };
 
   setUppercase = () => {
-    const letters = this.btns.filter(item => item.type === "letter");
-    letters && letters.map(item => item.classList.toggle("keyboard__btn--uppercase"));
+    const letters = this.btns.filter((item) => item.variation === 'letter');
+    // eslint-disable-next-line no-console
+    console.log('letters: ', letters, this.btns);
+    if (letters) {
+      letters.map((item) => item.classList.toggle('keyboard__btn--uppercase'));
+    }
   };
 
-  onClickBtn = (event) => { console.log("click", event);
-    const el = event.target;
-    const currentBtn = this.btns.find(btn => btn === el);
+  tabClick = () => {
+    const caret = this.textarea.selectionStart;
+    const val = this.textarea.value;
+    this.textarea.value = `${val.slice(0, caret)}\t${val.slice(caret)}`;
+    this.textarea.selectionStart = caret + 1;
+    this.textarea.selectionEnd = caret + 1;
+  };
 
+  toggleActiveClass = (code, active) => {
+    const currentBtn = this.btns.find((item) => item.dataset.code === code);
+
+    if (!currentBtn) {
+      return false;
+    }
+    // eslint-disable-next-line no-console
+    console.log(active);
+    if (active === undefined) {
+      return currentBtn.classList.toggle('keyboard__btn--active');
+    }
+    if (active) {
+      return currentBtn.classList.add('keyboard__btn--active');
+    }
+    return currentBtn.classList.remove('keyboard__btn--active');
+  };
+
+  onMouseUp = (event) => {
+    // eslint-disable-next-line no-console
+    // console.log(event);
+    //const activeBtns = this.btns.filter((item) => item.classList.contains('keyboard__btn--active'));
+    // eslint-disable-next-line no-console
+   // console.log('aCTIVE BTN: ', activeBtns);
+    // if (activeBtns.length > 0) {
+    //   activeBtns.map((item) => item.classList.remove('keyboard__btn--active'));
+    // }
+  };
+
+  onClickBtn = (event) => {
+    // eslint-disable-next-line no-console
+    console.log('click', event);
+    const el = event.target;
+    const currentBtn = el && this.btns.find((btn) => btn === el);
     this.textarea.focus();
 
-    if(currentBtn && currentBtn.code === "CapsLock") {
-      return this.setUppercase();
+    if (!currentBtn) {
+      return false;
     }
+    const caretStart = this.textarea.selectionStart;
+    const caretEnd = this.textarea.selectionEnd;
+    const val = this.textarea.value;
 
-    if(currentBtn && currentBtn.code === "Backspace") {
-      const caret = this.textarea.selectionStart;
-      const val = this.textarea.value;
-      this.textarea.value = val.slice(0, caret - 1) + val.slice(caret);
-      this.textarea.selectionStart = caret - 1;
-      this.textarea.selectionEnd = caret - 1;
-      return;
+    switch (currentBtn.code) {
+      case 'Space': {
+        this.textarea.value = `${val.slice(0, caretStart)} ${val.slice(caretStart + 1)}`;
+        this.textarea.selectionStart = caretStart + 1;
+        this.textarea.selectionEnd = caretStart + 1;
+        break;
+      }
+      case 'CapsLock': {
+        this.toggleActiveClass(currentBtn.code);
+        this.setUppercase();
+        break;
+      }
+      case 'Del': {
+        this.textarea.value = val.slice(0, caretStart) + val.slice(caretEnd);
+        this.textarea.selectionStart = caretStart;
+        this.textarea.selectionEnd = caretStart;
+        break;
+      }
+      case 'Backspace': {
+        this.textarea.value = val.slice(0, caretStart - 1) + val.slice(caretStart);
+        this.textarea.selectionStart = caretStart - 1;
+        this.textarea.selectionEnd = caretStart - 1;
+        break;
+      }
+      case 'Enter': {
+        this.textarea.value = `${val.slice(0, caretStart)}\n${val.slice(caretStart)}`;
+        this.textarea.selectionStart = caretStart + 1;
+        this.textarea.selectionEnd = caretStart + 1;
+        break;
+      }
+      case 'Tab': {
+        event.preventDefault();
+        this.tabClick();
+        break;
+      }
+      default:
+        break;
     }
-
-    if(currentBtn && currentBtn.code === "Enter") {
-      const caret = this.textarea.selectionStart;
-      const val = this.textarea.value;
-      this.textarea.value = val.slice(0, caret) + "\n" + val.slice(caret);
-      this.textarea.selectionStart = caret + 1;
-      this.textarea.selectionEnd = caret + 1;
-      return;
-    }
-
-    if(currentBtn && currentBtn.code === "Tab") {
-      event.preventDefault();
-      const caret = this.textarea.selectionStart;
-      const val = this.textarea.value;
-      this.textarea.value = val.slice(0, caret) + "\t" + val.slice(caret);
-      this.textarea.selectionStart = caret + 1;
-      this.textarea.selectionEnd = caret + 1;
-      return;
-    }
-
+    // eslint-disable-next-line no-console
     console.log(event);
-    console.log("currentBtn: ", currentBtn);
-    if(currentBtn) {
-      const caret = this.textarea.selectionStart;
-      const val = this.textarea.value;
-      this.textarea.value =  val.slice(0, caret) + el.innerText + val.slice(caret);
-      this.textarea.selectionStart = caret + 1;
-      this.textarea.selectionEnd = caret + 1;
-      return;
+    // eslint-disable-next-line no-console
+    console.log('currentBtn: ', currentBtn, currentBtn.variation);
+    if (['letter', 'digit', 'symbol'].includes(currentBtn.variation)) {
+      // eslint-disable-next-line no-console
+      console.log('currentBtn value: ', currentBtn.innerText);
+      this.textarea.value = val.slice(0, caretStart) + currentBtn.innerText + val.slice(caretStart);
+      this.textarea.selectionStart = caretStart + 1;
+      this.textarea.selectionEnd = caretStart + 1;
+      // return true;
     }
+    return false;
   };
 
   onKeyDown = (event) => {
-    const {code} = event;
+    const { code } = event;
+    // eslint-disable-next-line no-console
     console.log(event.altKey, event.ctrlKey);
 
-    if(event.altKey && event.ctrlKey) {
+    if (event.altKey && event.ctrlKey && event.repeat) {
+      return true;
+    }
+    if (event.altKey && event.ctrlKey) {
+      // eslint-disable-next-line no-console
+      console.log(event);
       this.changeLanguage();
     }
 
-    if(event.code === "CapsLock") {
+    if (event.code === 'CapsLock') {
       this.setUppercase();
     }
-    if(event.code === "Tab") {
+    if (event.code === 'Tab') {
       event.preventDefault();
+      this.tabClick();
     }
 
-    //console.log("keyDown: ", code, event.altKey, event.ctrlKey);
-    const el = this.btns.find(item => item.dataset.code === code);
-    el && el.classList.add("keyboard__btn--active");
-
-    //console.log("textarea: ", this.textarea.value);
-    
+    return this.toggleActiveClass(code, true);
   };
 
   onKeyUp = (event) => {
-    //console.log("keyup: ", event);
-    if(event.keyCode) {
-      const currentBtn = this.btns.find(item => item.dataset.code === event.code);
-      currentBtn && currentBtn.classList.remove("keyboard__btn--active");
+    const { code } = event;
+    if (code) {
+      this.toggleActiveClass(code, false);
     }
   };
 }

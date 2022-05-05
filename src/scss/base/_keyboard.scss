@@ -1,50 +1,92 @@
-@import url("https://fonts.googleapis.com/css?family=Open+Sans:400,600,700&display=swap");
-
 $font-size: 16px;
 $font-color: lch(53 105 40);
 
 html {
+}
+* {
   font-size: $font-size;
   color: $font-color;
-  font-family: "Open Sans", sans-serif;
+  font-family: 'Cousine', monospace;
 }
 
 .keyboard {
-  max-width: 1022px;
+  max-width: 920px;
   padding: 10px;
   box-sizing: border-box;
   margin: 20px auto 0;
-  background-color: #dddddd;
+  background-color: rgb(211, 209, 209);
   border-radius: 20px;
   box-shadow: 2px 3px 20px rgba(0, 0, 0, 0.4);
 
   color: #000000;
   display: flex;
   flex-wrap: wrap;
+  justify-content: space-between;
 
   &__btn {
-    padding: 6px;
+    outline: none;
     background-color: #eeeeee;
+    border: solid 1px #ccc;
     font-size: 0.9rem;
     border-radius: 6px;
     margin: 3px;
+    padding: 0;
     cursor: pointer;
     width: 48px;
-    min-height: 36px;
-    font-weight: 600;
+    min-height: 45px;
     box-shadow: 1px 2px 3px rgb(0 0 0 / 40%);
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    transition-duration: 0.4s;
+    position: relative;
+    z-index: 2;
+    font-family: Arial;
 
+    &:not(&--active):hover,
+    &--active {
+      color: #fff;
+      background-color: rgb(31, 177, 226);
+      border-color: rgb(31, 177, 226);
+      z-index: 1;
+    }
     &:not(&--active):hover {
-      background-color: lightblue;
       transition: background-color 300ms linear;
     }
     &--active {
-      background-color: rgb(31, 177, 226);
-      color: #fff;
+      transition: background-color 100ms linear;
     }
+
+    &:after {
+      content: '';
+      display: block;
+      position: absolute;
+      border-radius: 2px;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      transition: all 0.5s;
+      box-shadow: 0 0 5px 20px rgb(31, 177, 226);
+    }
+
+    &:active:after,
+    &--active:after {
+      box-shadow: 0 0 0 0 rgb(31, 177, 226);
+      position: absolute;
+      border-radius: 2px;
+      left: 0;
+      top: 0;
+      opacity: 0.9;
+      transition: 0s;
+    }
+
+    &:active,
+    &--active {
+      padding: 0;
+      box-shadow: none;
+      // top: -1px;
+      // z-index: 1;
+    }
+
     &--uppercase {
       text-transform: uppercase;
     }
@@ -60,23 +102,34 @@ html {
     }
     &.tab {
       width: 112px;
-      justify-content: left;
-    }
-    &.capslock {
-      width: 114px;
-      justify-content: left;
     }
     &.enter {
       width: 112px;
     }
     &.shiftright,
-    &.shiftleft,
+    &.shiftleft {
+      width: 130px;
+    }
+    &.capslock,
     &.enter {
       width: 114px;
+    }
+    &.shiftright,
+    &.enter {
+      text-align: right;
+      padding-right: 0.7rem;
+    }
+    &.tab,
+    &.shiftleft,
+    &.capslock {
       text-align: left;
+      padding-left: 0.7rem;
     }
     &.space {
-      width: 444px;
+      width: 410px;
+    }
+    &.controlright {
+      width: 70px;
     }
   }
 }
@@ -131,11 +184,27 @@ html {
 }
 .textarea {
   width: 100%;
+  max-width: 100%;
   height: 200px;
-  max-width: 900px;
-  margin: 0 auto;
+  max-height: 200px;
+
+  background-color: #fff;
   display: block;
   font-size: 16px;
+  border: none;
+
+  &:focus {
+    border: 0;
+    outline: none;
+  }
+  &__wrapper {
+    max-width: 900px;
+    margin: 0 auto;
+    border: solid 2px #928e8e;
+    background-color: #eeeeee;
+    padding: 2rem;
+    border-radius: 0.5rem;
+  }
 }
 .message {
   text-align: center;
