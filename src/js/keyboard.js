@@ -9,32 +9,28 @@ const keyButton = ({
   div.innerText = key;
   div.code = code;
   div.type = 'button';
-  if (type) {
-    div.variation = type;
-  }
+  div.variation = type || '';
   div.id = keyCode;
-  div.dataset.code = code;
   return div;
 };
 
-const createContainer = (tag, style) => {
+const createContainer = (tag, ...style) => {
   const div = document.createElement(tag);
-  div.classList.add(style);
-
+  div.classList.add(...style);
   return div;
-};
-
-const languages = {
-  ru: ruKeys,
-  en: enKeys,
 };
 
 class Keyboard {
-  element;
-
   textarea;
 
   kboard;
+
+  langContainer;
+
+  languages = {
+    ru: ruKeys,
+    en: enKeys,
+  };
 
   constructor() {
     this.lang = localStorage.getItem('lang') || 'en';
@@ -43,14 +39,20 @@ class Keyboard {
   }
 
   create() {
-    const currentLanguageKeys = languages[this.lang];
     const div = createContainer('div', 'container');
     const textareaWrapper = createContainer('div', 'textarea__wrapper');
-
-    this.kboard = createContainer('div', 'keyboard');
     this.textarea = createContainer('textarea', 'textarea');
     this.textarea.cols = 100;
     this.textarea.rows = 30;
+    textareaWrapper.append(this.textarea);
+
+    this.langContainer = createContainer('button', 'keyboard__btn', 'lang');
+    this.drawLanguageBtn();
+
+    this.kboard = createContainer('div', 'keyboard');
+    this.kboard.insertAdjacentElement('afterbegin', this.langContainer);
+
+    const currentLanguageKeys = this.languages[this.lang];
 
     if (currentLanguageKeys) {
       currentLanguageKeys.map((keyCode) => {
@@ -60,11 +62,7 @@ class Keyboard {
         return this.kboard.append(btn);
       });
     }
-    const langInfo = createContainer('div', 'keyboard__key');
-    langInfo.innerText = this.lang;
-    this.kboard.insertAdjacentElement('afterbegin', langInfo);
 
-    textareaWrapper.append(this.textarea);
     div.insertAdjacentElement('afterbegin', textareaWrapper);
     div.insertAdjacentElement('beforeEnd', this.kboard);
     div.insertAdjacentHTML(
@@ -73,6 +71,7 @@ class Keyboard {
     );
 
     this.textarea.focus();
+    this.langContainer.addEventListener('click', this.changeLanguage);
     this.kboard.addEventListener('click', this.onClickBtn);
     this.kboard.addEventListener('mouseup', this.onMouseUp);
     document.addEventListener('keydown', this.onKeyDown);
@@ -80,24 +79,33 @@ class Keyboard {
     document.body.insertAdjacentElement('afterbegin', div);
   }
 
+  drawLanguageBtn = () => {
+    this.langContainer.innerText = this.lang;
+    const styles = this.langContainer.classList;
+    const match = styles.value.match(/lang--\w{2}/);
+
+    if (match) {
+      styles.remove(match[0]);
+    }
+    styles.add(`lang--${this.lang}`);
+  };
+
   changeLanguage = () => {
     this.lang = this.lang === 'ru' ? 'en' : 'ru';
     localStorage.setItem('lang', this.lang);
 
-    const keyCodes = languages[this.lang];
-    // eslint-disable-next-line no-console
-    // console.log('keyCodes: ', keyCodes);
+    this.drawLanguageBtn();
+
+    const keyCodes = this.languages[this.lang];
+
     if (!keyCodes) return;
 
     const letters = this.btns.filter((btn) => btn.variation === 'letter');
-    // eslint-disable-next-line no-console
-    // console.log('letters: ', letters);
+
     if (letters) {
       letters.map((item) => {
         const letterBtn = item;
         const currentKey = keyCodes.find((key) => key.keyCode === parseInt(item.id, 10));
-        // eslint-disable-next-line no-console
-        // console.log(currentKey, item.id);
         letterBtn.innerText = currentKey.key;
         return letterBtn;
       });
@@ -106,11 +114,18 @@ class Keyboard {
 
   setUppercase = () => {
     const letters = this.btns.filter((item) => item.variation === 'letter');
-    // eslint-disable-next-line no-console
-    console.log('letters: ', letters, this.btns);
+
     if (letters) {
       letters.map((item) => item.classList.toggle('keyboard__btn--uppercase'));
     }
+  };
+
+  addLetter = (letter) => {
+    const caretStart = this.textarea.selectionStart;
+    const val = this.textarea.value;
+    this.textarea.value = val.slice(0, caretStart) + letter + val.slice(caretStart);
+    this.textarea.selectionStart = caretStart + 1;
+    this.textarea.selectionEnd = caretStart + 1;
   };
 
   tabClick = () => {
@@ -122,38 +137,25 @@ class Keyboard {
   };
 
   toggleActiveClass = (code, active) => {
-    const currentBtn = this.btns.find((item) => item.dataset.code === code);
+    const currentBtn = this.btns.find((item) => item.code === code);
 
     if (!currentBtn) {
       return false;
     }
-    // eslint-disable-next-line no-console
-    console.log(active);
-    if (active === undefined) {
+
+    if (active === 'toggle') {
       return currentBtn.classList.toggle('keyboard__btn--active');
     }
+
     if (active) {
       return currentBtn.classList.add('keyboard__btn--active');
     }
     return currentBtn.classList.remove('keyboard__btn--active');
   };
 
-  onMouseUp = (event) => {
-    // eslint-disable-next-line no-console
-    // console.log(event);
-    //const activeBtns = this.btns.filter((item) => item.classList.contains('keyboard__btn--active'));
-    // eslint-disable-next-line no-console
-   // console.log('aCTIVE BTN: ', activeBtns);
-    // if (activeBtns.length > 0) {
-    //   activeBtns.map((item) => item.classList.remove('keyboard__btn--active'));
-    // }
-  };
-
   onClickBtn = (event) => {
-    // eslint-disable-next-line no-console
-    console.log('click', event);
-    const el = event.target;
-    const currentBtn = el && this.btns.find((btn) => btn === el);
+    const currentBtn = event.target;
+
     this.textarea.focus();
 
     if (!currentBtn) {
@@ -171,12 +173,12 @@ class Keyboard {
         break;
       }
       case 'CapsLock': {
-        this.toggleActiveClass(currentBtn.code);
+        this.toggleActiveClass(currentBtn.code, 'toggle');
         this.setUppercase();
         break;
       }
-      case 'Del': {
-        this.textarea.value = val.slice(0, caretStart) + val.slice(caretEnd);
+      case 'NumpadDecimal': {
+        this.textarea.value = val.slice(0, caretStart) + val.slice(caretEnd + 1);
         this.textarea.selectionStart = caretStart;
         this.textarea.selectionEnd = caretStart;
         break;
@@ -201,51 +203,68 @@ class Keyboard {
       default:
         break;
     }
-    // eslint-disable-next-line no-console
-    console.log(event);
-    // eslint-disable-next-line no-console
-    console.log('currentBtn: ', currentBtn, currentBtn.variation);
+
     if (['letter', 'digit', 'symbol'].includes(currentBtn.variation)) {
-      // eslint-disable-next-line no-console
-      console.log('currentBtn value: ', currentBtn.innerText);
-      this.textarea.value = val.slice(0, caretStart) + currentBtn.innerText + val.slice(caretStart);
-      this.textarea.selectionStart = caretStart + 1;
-      this.textarea.selectionEnd = caretStart + 1;
-      // return true;
+      this.addLetter(currentBtn.innerText);
     }
-    return false;
+    return true;
   };
 
   onKeyDown = (event) => {
-    const { code } = event;
-    // eslint-disable-next-line no-console
-    console.log(event.altKey, event.ctrlKey);
+    const {
+      code, altKey, ctrlKey, key, repeat,
+    } = event;
 
-    if (event.altKey && event.ctrlKey && event.repeat) {
-      return true;
-    }
-    if (event.altKey && event.ctrlKey) {
-      // eslint-disable-next-line no-console
-      console.log(event);
-      this.changeLanguage();
+    if (repeat) {
+      event.preventDefault();
+      return false;
     }
 
-    if (event.code === 'CapsLock') {
-      this.setUppercase();
+    this.textarea.focus();
+
+    if (code === 'CapsLock') {
+      this.toggleActiveClass(code, 'toggle');
+      return this.setUppercase();
     }
-    if (event.code === 'Tab') {
+
+    if (code === 'Tab') {
       event.preventDefault();
       this.tabClick();
+      return this.toggleActiveClass(code, true);
     }
 
+    if (altKey && ctrlKey) {
+      this.changeLanguage();
+      return this.toggleActiveClass(code, true);
+    }
+
+    if (key === 'Shift') {
+      this.setUppercase();
+      return this.toggleActiveClass(code, true);
+    }
+
+    const currentBtn = this.btns.find((btn) => btn.code === code);
+
+    if (currentBtn && ['letter', 'digit', 'symbol'].includes(currentBtn.variation)) {
+      event.preventDefault();
+      this.addLetter(currentBtn.innerText);
+      return this.toggleActiveClass(code, true);
+    }
     return this.toggleActiveClass(code, true);
   };
 
   onKeyUp = (event) => {
-    const { code } = event;
-    if (code) {
+    const { code, key } = event;
+
+    if (key === 'Shift') {
       this.toggleActiveClass(code, false);
+      return this.setUppercase();
     }
+
+    if (code && code !== 'CapsLock') {
+      return this.toggleActiveClass(code, false);
+    }
+    return false;
   };
 }
 
