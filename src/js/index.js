@@ -1,7 +1,7 @@
-import "../scss/index.scss";
-import Keyboard from "./keyboard.js";
+import '../scss/index.scss';
+import Keyboard from './keyboard';
 
-document.addEventListener("DOMContentLoaded", function() {
-  const keyboard = new Keyboard();
-  console.log(keyboard);
+document.addEventListener('DOMContentLoaded', () => {
+  const kbord = new Keyboard();
+  kbord.create();
 });

@@ -35,7 +35,7 @@ class Keyboard {
   constructor() {
     this.lang = localStorage.getItem('lang') || 'en';
     this.btns = [];
-    this.create();
+    // this.create();
   }
 
   create() {
